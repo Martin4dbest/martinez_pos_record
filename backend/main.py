@@ -1,8 +1,10 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from database import get_db
 from auth import hash_password, verify_password, verify_admin
+import os
 
 app = FastAPI()
 
@@ -37,7 +39,6 @@ class RegisterRequest(BaseModel):
     role: str = "attendant"
     current_user_id: int
 
-
 # ============================================================
 # LOGIN
 # ============================================================
@@ -60,7 +61,7 @@ def login(req: LoginRequest):
 
     return {
         "user_id": user[0],
-        "username": user[1],  # <-- add this line
+        "username": user[1],
         "role": user[3]
     }
 
@@ -97,7 +98,6 @@ def register_user(req: RegisterRequest):
 
     return {"message": f"User '{req.username}' registered successfully"}
 
-
 # ============================================================
 # CREATE TRANSACTION
 # ============================================================
@@ -122,7 +122,6 @@ def log_transaction(req: TransactionRequest):
     conn.close()
 
     return {"message": "Transaction recorded successfully"}
-
 
 # ============================================================
 # GET ALL TRANSACTIONS (Admin Dashboard)
@@ -161,7 +160,6 @@ def all_transactions():
         for r in rows
     ]
 
-
 # ============================================================
 # GET ALL ATTENDANTS
 # ============================================================
@@ -190,7 +188,6 @@ def get_attendants():
         for r in rows
     ]
 
-
 # ============================================================
 # DASHBOARD STATS
 # ============================================================
@@ -209,7 +206,6 @@ def attendants_count():
 
     return {"count": count}
 
-
 # Total Transactions
 @app.get("/transactions_count")
 def transactions_count():
@@ -223,7 +219,6 @@ def transactions_count():
     conn.close()
 
     return {"count": count}
-
 
 # Total Sales (Amount + Charge)
 @app.get("/total_sales")
@@ -261,3 +256,9 @@ def delete_all_transactions():
     finally:
         cur.close()
         conn.close()
+
+# ============================================================
+# SERVE FRONTEND
+# ============================================================
+frontend_path = os.path.join(os.path.dirname(__file__), "frontend")
+app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
