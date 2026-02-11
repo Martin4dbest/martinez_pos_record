@@ -40,9 +40,9 @@ class RegisterRequest(BaseModel):
     current_user_id: int
 
 # ============================================================
-# ROOT: redirect to login.html
+# ROOT (handle GET + HEAD properly)
 # ============================================================
-@app.get("/")
+@app.api_route("/", methods=["GET", "HEAD"])
 def root():
     return RedirectResponse(url="/login.html")
 
@@ -83,8 +83,7 @@ def register_user(req: RegisterRequest):
     cur = conn.cursor()
 
     cur.execute("SELECT id FROM users WHERE username=%s", (req.username,))
-    existing = cur.fetchone()
-    if existing:
+    if cur.fetchone():
         cur.close()
         conn.close()
         raise HTTPException(status_code=400, detail="Username already exists")
@@ -128,7 +127,7 @@ def log_transaction(req: TransactionRequest):
     return {"message": "Transaction recorded successfully"}
 
 # ============================================================
-# GET ALL TRANSACTIONS (Admin Dashboard)
+# GET ALL TRANSACTIONS
 # ============================================================
 @app.get("/all_transactions")
 def all_transactions():
@@ -137,7 +136,7 @@ def all_transactions():
 
     cur.execute("""
         SELECT s.id,
-               u.username AS attendant_name,
+               u.username,
                s.amount_withdrawn,
                s.charge,
                s.transaction_type,
@@ -162,27 +161,6 @@ def all_transactions():
         }
         for r in rows
     ]
-
-# ============================================================
-# GET ALL ATTENDANTS
-# ============================================================
-@app.get("/attendants")
-def get_attendants():
-    conn = get_db()
-    cur = conn.cursor()
-
-    cur.execute("""
-        SELECT id, username
-        FROM users
-        WHERE role = 'attendant'
-        ORDER BY id DESC
-    """)
-
-    rows = cur.fetchall()
-    cur.close()
-    conn.close()
-
-    return [{"id": r[0], "username": r[1]} for r in rows]
 
 # ============================================================
 # DASHBOARD STATS
@@ -237,7 +215,9 @@ def delete_all_transactions():
         conn.close()
 
 # ============================================================
-# SERVE FRONTEND
+# SERVE FRONTEND (MOUNT LAST)
 # ============================================================
 frontend_path = os.path.join(os.path.dirname(__file__), "frontend")
-app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
+
+if os.path.exists(frontend_path):
+    app.mount("/static", StaticFiles(directory=frontend_path), name="static")
