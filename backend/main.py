@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from database import get_db
 from auth import hash_password, verify_password, verify_admin
@@ -22,7 +23,6 @@ app.add_middleware(
 # =============================
 # Pydantic Models
 # =============================
-
 class LoginRequest(BaseModel):
     username: str
     password: str
@@ -38,6 +38,13 @@ class RegisterRequest(BaseModel):
     password: str
     role: str = "attendant"
     current_user_id: int
+
+# ============================================================
+# ROOT: redirect to login.html
+# ============================================================
+@app.get("/")
+def root():
+    return RedirectResponse(url="/login.html")
 
 # ============================================================
 # LOGIN
@@ -70,14 +77,11 @@ def login(req: LoginRequest):
 # ============================================================
 @app.post("/register")
 def register_user(req: RegisterRequest):
-
-    # Verify admin
     verify_admin(req.current_user_id)
 
     conn = get_db()
     cur = conn.cursor()
 
-    # Check if username already exists
     cur.execute("SELECT id FROM users WHERE username=%s", (req.username,))
     existing = cur.fetchone()
     if existing:
@@ -144,7 +148,6 @@ def all_transactions():
     """)
 
     rows = cur.fetchall()
-
     cur.close()
     conn.close()
 
@@ -176,66 +179,42 @@ def get_attendants():
     """)
 
     rows = cur.fetchall()
-
     cur.close()
     conn.close()
 
-    return [
-        {
-            "id": r[0],
-            "username": r[1]
-        }
-        for r in rows
-    ]
+    return [{"id": r[0], "username": r[1]} for r in rows]
 
 # ============================================================
 # DASHBOARD STATS
 # ============================================================
-
-# Total Attendants
 @app.get("/attendants_count")
 def attendants_count():
     conn = get_db()
     cur = conn.cursor()
-
     cur.execute("SELECT COUNT(*) FROM users WHERE role='attendant'")
     count = cur.fetchone()[0]
-
     cur.close()
     conn.close()
-
     return {"count": count}
 
-# Total Transactions
 @app.get("/transactions_count")
 def transactions_count():
     conn = get_db()
     cur = conn.cursor()
-
     cur.execute("SELECT COUNT(*) FROM sales")
     count = cur.fetchone()[0]
-
     cur.close()
     conn.close()
-
     return {"count": count}
 
-# Total Sales (Amount + Charge)
 @app.get("/total_sales")
 def total_sales():
     conn = get_db()
     cur = conn.cursor()
-
-    cur.execute("""
-        SELECT COALESCE(SUM(amount_withdrawn + charge), 0)
-        FROM sales
-    """)
-
+    cur.execute("SELECT COALESCE(SUM(amount_withdrawn + charge), 0) FROM sales")
     total = cur.fetchone()[0]
-
     cur.close()
     conn.close()
-
     return {"total": float(total)}
 
 # ============================================================
@@ -250,7 +229,7 @@ def delete_all_transactions():
         deleted_count = cur.rowcount
         conn.commit()
         return {"message": f"All transactions deleted ({deleted_count})"}
-    except Exception as e:
+    except Exception:
         conn.rollback()
         raise HTTPException(status_code=500, detail="Failed to delete all transactions")
     finally:
