@@ -1,0 +1,25 @@
+# Python / Backend
+env/
+*.pyc
+__pycache__/
+*.sqlite3
+*.db
+*.log
+
+# VSCode / IDE
+.vscode/
+.idea/
+
+# Node / Frontend
+node_modules/
+dist/
+build/
+npm-debug.log
+yarn-error.log
+
+# System
+.DS_Store
+Thumbs.db
+
+# Environment files
+*.env
