@@ -29,11 +29,10 @@
     <main class="flex-1 p-4 overflow-auto">
 
       <!-- Dashboard -->
-      <div id="dashboardSection" class="hidden">
+      <div id="dashboardSection">
         <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-2">Admin Dashboard</h2>
-        <p class="mb-4 text-gray-600">Welcome to MartinezPOS Admin Panel. Use the menu to navigate.</p>
+        <p class="mb-4 text-gray-600">Welcome to MartinezPOS Admin Panel.</p>
 
-        <!-- Only Total Sales Card -->
         <div class="max-w-md mx-auto mb-6">
           <div class="bg-white shadow rounded-xl p-6 flex flex-col items-center">
             <h3 class="text-lg font-semibold text-gray-700">Total Sales Amount</h3>
@@ -46,11 +45,12 @@
       <div id="transactionsSection" class="hidden">
         <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-4">All Transactions</h2>
 
-        <!-- Search -->
         <div class="max-w-md mx-auto mb-4 flex gap-2">
-          <input id="transactionSearch" type="text" placeholder="Search by attendant name..."
+          <input id="transactionSearch" type="text"
+            placeholder="Search by attendant name..."
             class="w-full px-4 py-3 border rounded-xl border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-gray-700"/>
-          <button id="clearTransactionsBtn" class="bg-red-500 hover:bg-red-600 text-white px-4 py-3 rounded-xl font-semibold transition">
+          <button id="clearTransactionsBtn"
+            class="bg-red-500 hover:bg-red-600 text-white px-4 py-3 rounded-xl font-semibold transition">
             Clear All
           </button>
         </div>
@@ -59,18 +59,15 @@
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>
-                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Attendant</th>
-                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount Withdrawn</th>
-                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Charge</th>
-                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Transaction Type</th>
-                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Attendant</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Charge</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
               </tr>
             </thead>
-            <tbody id="transactionsTableBody" class="bg-white divide-y divide-gray-200">
-              <!-- JS populates transactions -->
-            </tbody>
+            <tbody id="transactionsTableBody" class="bg-white divide-y divide-gray-200"></tbody>
           </table>
         </div>
       </div>
@@ -78,122 +75,145 @@
     </main>
   </div>
 
-  <script>
-    const user_id = localStorage.getItem("user_id");
-    const role = localStorage.getItem("role");
+<script>
 
-    if (!user_id || role !== "admin") {
-      alert("Access denied. Only admins can access this page.");
+  // =============================
+  // AUTH CHECK
+  // =============================
+  const user_id = localStorage.getItem("user_id");
+  const role = localStorage.getItem("role");
+
+  if (!user_id || role !== "admin") {
+    alert("Access denied.");
+    window.location.href = "login.html";
+  }
+
+  // =============================
+  // LOGOUT
+  // =============================
+  ["logoutBtn", "logoutBtnDesktop"].forEach(id => {
+    document.getElementById(id)?.addEventListener("click", () => {
+      localStorage.clear();
       window.location.href = "login.html";
-    }
-
-    // Logout buttons
-    const logoutBtns = [document.getElementById("logoutBtn"), document.getElementById("logoutBtnDesktop")];
-    logoutBtns.forEach(btn => btn?.addEventListener("click", () => {
-      localStorage.removeItem("user_id");
-      localStorage.removeItem("role");
-      window.location.href = "login.html";
-    }));
-
-    const dashboardSection = document.getElementById("dashboardSection");
-    const transactionsSection = document.getElementById("transactionsSection");
-
-    document.getElementById("navDashboard").onclick = () => {
-      dashboardSection.classList.remove("hidden");
-      transactionsSection.classList.add("hidden");
-      loadDashboardStats();
-    };
-
-    document.getElementById("navTransactions").onclick = () => {
-      dashboardSection.classList.add("hidden");
-      transactionsSection.classList.remove("hidden");
-      loadTransactions();
-    };
-
-    // Load dashboard stats
-    async function loadDashboardStats() {
-      try {
-        const salesRes = await fetch("http://127.0.0.1:8000/total_sales");
-        const salesData = await salesRes.json();
-        document.getElementById("totalSales").innerText = `₦${salesData.total || 0}`;
-      } catch (err) { console.error("Failed to fetch dashboard stats:", err); }
-    }
-
-    // Load transactions
-    let allTransactions = [];
-    async function loadTransactions() {
-      const tableBody = document.getElementById("transactionsTableBody");
-      tableBody.innerHTML = "<tr><td colspan='7' class='text-center p-4'>Loading...</td></tr>";
-      try {
-        const res = await fetch("http://127.0.0.1:8000/all_transactions");
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        const data = await res.json();
-
-        // Ensure it's an array
-        allTransactions = Array.isArray(data) ? data : (data.transactions || []);
-        renderTransactions(allTransactions);
-      } catch (err) {
-        console.error("Failed to load transactions:", err);
-        tableBody.innerHTML = "<tr><td colspan='7' class='text-center p-4 text-red-500'>Failed to load transactions. Check console.</td></tr>";
-      }
-    }
-
-    function renderTransactions(data) {
-      const tableBody = document.getElementById("transactionsTableBody");
-      tableBody.innerHTML = "";
-      if (!data.length) {
-        tableBody.innerHTML = "<tr><td colspan='7' class='text-center p-4'>No transactions found</td></tr>";
-        return;
-      }
-      data.forEach(t => {
-        let dt;
-        try {
-          dt = new Date(t.created_at.replace(' ', 'T'));
-        } catch {
-          dt = new Date();
-        }
-        const date = dt.toLocaleDateString();
-        const time = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td class="px-4 py-2 whitespace-nowrap">${t.id}</td>
-          <td class="px-4 py-2 whitespace-nowrap">${t.attendant_name}</td>
-          <td class="px-4 py-2 whitespace-nowrap">₦${t.amount_withdrawn}</td>
-          <td class="px-4 py-2 whitespace-nowrap">₦${t.charge}</td>
-          <td class="px-4 py-2 whitespace-nowrap">${t.transaction_type}</td>
-          <td class="px-4 py-2 whitespace-nowrap">${date}</td>
-          <td class="px-4 py-2 whitespace-nowrap">${time}</td>
-        `;
-        tableBody.appendChild(tr);
-      });
-    }
-
-    // Transaction search
-    document.getElementById("transactionSearch").addEventListener("input", e => {
-      const val = e.target.value.toLowerCase();
-      const filtered = allTransactions.filter(t => t.attendant_name.toLowerCase().includes(val));
-      renderTransactions(filtered);
     });
+  });
 
-    // Clear all transactions
-    document.getElementById("clearTransactionsBtn").onclick = async () => {
-      if (confirm("Are you sure you want to delete ALL transactions?")) {
-        try {
-          const res = await fetch("http://127.0.0.1:8000/delete_all_transactions", { method: "DELETE" });
-          const data = await res.json();
-          if (res.ok) {
-            alert(data.message || "All transactions deleted!");
-            loadTransactions();
-            loadDashboardStats();
-          } else alert(data.detail || "Failed to delete transactions");
-        } catch (err) { alert("Server unreachable. Check console."); console.error(err); }
-      }
-    };
+  const dashboardSection = document.getElementById("dashboardSection");
+  const transactionsSection = document.getElementById("transactionsSection");
 
-    // Show dashboard on load
+  document.getElementById("navDashboard").onclick = () => {
     dashboardSection.classList.remove("hidden");
+    transactionsSection.classList.add("hidden");
     loadDashboardStats();
-  </script>
+  };
+
+  document.getElementById("navTransactions").onclick = () => {
+    dashboardSection.classList.add("hidden");
+    transactionsSection.classList.remove("hidden");
+    loadTransactions();
+  };
+
+  // =============================
+  // DASHBOARD STATS
+  // =============================
+  async function loadDashboardStats() {
+    try {
+      const res = await fetch("/total_sales");
+      const data = await res.json();
+      document.getElementById("totalSales").innerText = `₦${data.total || 0}`;
+    } catch (err) {
+      console.error("Failed to fetch stats:", err);
+    }
+  }
+
+  // =============================
+  // LOAD TRANSACTIONS
+  // =============================
+  let allTransactions = [];
+
+  async function loadTransactions() {
+    const tableBody = document.getElementById("transactionsTableBody");
+    tableBody.innerHTML = "<tr><td colspan='6' class='text-center p-4'>Loading...</td></tr>";
+
+    try {
+      const res = await fetch("/all_transactions");
+      const data = await res.json();
+
+      allTransactions = Array.isArray(data) ? data : [];
+      renderTransactions(allTransactions);
+
+    } catch (err) {
+      console.error("Failed:", err);
+      tableBody.innerHTML = "<tr><td colspan='6' class='text-center p-4 text-red-500'>Failed to load transactions</td></tr>";
+    }
+  }
+
+  function renderTransactions(data) {
+    const tableBody = document.getElementById("transactionsTableBody");
+    tableBody.innerHTML = "";
+
+    if (!data.length) {
+      tableBody.innerHTML = "<tr><td colspan='6' class='text-center p-4'>No transactions found</td></tr>";
+      return;
+    }
+
+    data.forEach(t => {
+
+      const dateObj = new Date(t.sales_date);
+      const formattedDate = dateObj.toLocaleDateString();
+
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td class="px-4 py-2">${t.id}</td>
+        <td class="px-4 py-2">${t.attendant_name}</td>
+        <td class="px-4 py-2">₦${t.amount_withdrawn}</td>
+        <td class="px-4 py-2">₦${t.charge}</td>
+        <td class="px-4 py-2">${t.transaction_type}</td>
+        <td class="px-4 py-2">${formattedDate}</td>
+      `;
+      tableBody.appendChild(tr);
+    });
+  }
+
+  // =============================
+  // SEARCH
+  // =============================
+  document.getElementById("transactionSearch").addEventListener("input", e => {
+    const val = e.target.value.toLowerCase();
+    const filtered = allTransactions.filter(t =>
+      t.attendant_name.toLowerCase().includes(val)
+    );
+    renderTransactions(filtered);
+  });
+
+  // =============================
+  // DELETE ALL
+  // =============================
+  document.getElementById("clearTransactionsBtn").onclick = async () => {
+    if (!confirm("Delete ALL transactions?")) return;
+
+    try {
+      const res = await fetch("/delete_all_transactions", { method: "DELETE" });
+      const data = await res.json();
+
+      if (res.ok) {
+        alert(data.message);
+        loadTransactions();
+        loadDashboardStats();
+      } else {
+        alert(data.detail || "Failed to delete.");
+      }
+    } catch (err) {
+      alert("Server unreachable.");
+    }
+  };
+
+  // =============================
+  // INIT
+  // =============================
+  loadDashboardStats();
+
+</script>
+
 </body>
 </html>

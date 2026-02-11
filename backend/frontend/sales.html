@@ -100,14 +100,14 @@
     logoutBtn.onclick = () => {
       localStorage.removeItem("user_id");
       localStorage.removeItem("role");
-      localStorage.removeItem("username"); // remove saved username too
+      localStorage.removeItem("username");
       window.location.href = "login.html";
     }
 
     // Verify attendant login
     const user_id = localStorage.getItem("user_id");
     const role = localStorage.getItem("role");
-    const username = localStorage.getItem("username"); // fetch attendant name
+    const username = localStorage.getItem("username");
 
     if (!user_id || role === "admin") {
       alert("Access denied. Only attendants can access this page.");
@@ -137,7 +137,8 @@
       const transaction_type = document.getElementById("transaction_type").value;
 
       try {
-        const res = await fetch("http://127.0.0.1:8000/transactions", {
+        // ✅ ONLY CHANGE: Use relative path instead of localhost
+        const res = await fetch("/transactions", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
