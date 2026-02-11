@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import RedirectResponse
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from database import get_db
 from auth import hash_password, verify_password, verify_admin
@@ -39,12 +39,34 @@ class RegisterRequest(BaseModel):
     role: str = "attendant"
     current_user_id: int
 
+
 # ============================================================
-# ROOT (handle GET + HEAD properly)
+# FRONTEND PATH
 # ============================================================
-@app.api_route("/", methods=["GET", "HEAD"])
-def root():
-    return RedirectResponse(url="/login.html")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
+
+
+# ============================================================
+# ROOT → SERVE login.html DIRECTLY
+# ============================================================
+@app.get("/")
+def serve_login():
+    return FileResponse(os.path.join(FRONTEND_DIR, "login.html"))
+
+
+# ============================================================
+# SERVE OTHER HTML FILES
+# ============================================================
+@app.get("/{page_name}")
+def serve_page(page_name: str):
+    file_path = os.path.join(FRONTEND_DIR, page_name)
+
+    if os.path.exists(file_path) and file_path.endswith(".html"):
+        return FileResponse(file_path)
+
+    raise HTTPException(status_code=404, detail="Page not found")
+
 
 # ============================================================
 # LOGIN
@@ -71,6 +93,7 @@ def login(req: LoginRequest):
         "username": user[1],
         "role": user[3]
     }
+
 
 # ============================================================
 # REGISTER (Admin Only)
@@ -101,6 +124,7 @@ def register_user(req: RegisterRequest):
 
     return {"message": f"User '{req.username}' registered successfully"}
 
+
 # ============================================================
 # CREATE TRANSACTION
 # ============================================================
@@ -125,6 +149,7 @@ def log_transaction(req: TransactionRequest):
     conn.close()
 
     return {"message": "Transaction recorded successfully"}
+
 
 # ============================================================
 # GET ALL TRANSACTIONS
@@ -162,6 +187,7 @@ def all_transactions():
         for r in rows
     ]
 
+
 # ============================================================
 # DASHBOARD STATS
 # ============================================================
@@ -175,6 +201,7 @@ def attendants_count():
     conn.close()
     return {"count": count}
 
+
 @app.get("/transactions_count")
 def transactions_count():
     conn = get_db()
@@ -185,6 +212,7 @@ def transactions_count():
     conn.close()
     return {"count": count}
 
+
 @app.get("/total_sales")
 def total_sales():
     conn = get_db()
@@ -194,6 +222,7 @@ def total_sales():
     cur.close()
     conn.close()
     return {"total": float(total)}
+
 
 # ============================================================
 # DELETE ALL TRANSACTIONS
@@ -213,11 +242,3 @@ def delete_all_transactions():
     finally:
         cur.close()
         conn.close()
-
-# ============================================================
-# SERVE FRONTEND (MOUNT LAST)
-# ============================================================
-frontend_path = os.path.join(os.path.dirname(__file__), "frontend")
-
-if os.path.exists(frontend_path):
-    app.mount("/static", StaticFiles(directory=frontend_path), name="static")
