@@ -166,7 +166,7 @@
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td class="px-4 py-2">${t.id}</td>
-        <td class="px-4 py-2">${t.attendant_name || t.username}</td>
+        <td class="px-4 py-2">${t.attendant_name || t.username || t.user_id}</td>
         <td class="px-4 py-2">₦${t.amount_withdrawn}</td>
         <td class="px-4 py-2">₦${t.charge}</td>
         <td class="px-4 py-2">${t.transaction_type}</td>
@@ -183,7 +183,7 @@
   document.getElementById("transactionSearch").addEventListener("input", e => {
     const val = e.target.value.toLowerCase();
     const filtered = allTransactions.filter(t =>
-      (t.attendant_name || t.username).toLowerCase().includes(val)
+      (t.attendant_name || t.username || t.user_id).toString().toLowerCase().includes(val)
     );
     renderTransactions(filtered);
   });
