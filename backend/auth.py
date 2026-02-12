@@ -21,14 +21,21 @@ def verify_password(password: str, hashed: str):
 # -----------------------------
 # Admin Verification
 # -----------------------------
+
 def verify_admin(user_id: int):
     """
     Check if user is admin. Raises 401 if not.
     """
     conn = get_db()
     cur = conn.cursor()
-    cur.execute("SELECT role FROM users WHERE id=%s", (user_id,))
-    user = cur.fetchone()
-    if not user or user[0] != "admin":
-        raise HTTPException(status_code=401, detail="Admin access required")
-    return user_id
+    try:
+        cur.execute("SELECT role FROM users WHERE id=%s", (user_id,))
+        user = cur.fetchone()
+
+        if not user or user[0] != "admin":
+            raise HTTPException(status_code=401, detail="Admin access required")
+
+        return user_id
+    finally:
+        cur.close()
+        conn.close()

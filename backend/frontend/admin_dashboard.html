@@ -10,7 +10,12 @@
   <!-- Header (mobile) -->
   <header class="bg-white shadow-md p-4 flex justify-between items-center md:hidden">
     <h1 class="text-xl font-bold text-indigo-600">MartinezPOS Admin</h1>
-    <button id="logoutBtn" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-xl font-medium transition">Logout</button>
+    <div class="flex gap-2">
+      <button id="navDashboardMobile" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-xl font-medium transition text-sm">Dashboard</button>
+      <button id="navTransactionsMobile" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-xl font-medium transition text-sm">Transactions</button>
+      <button id="navRegisterAttendantMobile" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-xl font-medium transition text-sm">Register</button>
+      <button id="logoutBtn" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-xl font-medium transition">Logout</button>
+    </div>
   </header>
 
   <div class="flex flex-1 overflow-hidden">
@@ -21,6 +26,7 @@
       <nav class="flex flex-col gap-3">
         <button id="navDashboard" class="text-gray-700 hover:text-indigo-600 font-medium">Dashboard</button>
         <button id="navTransactions" class="text-gray-700 hover:text-indigo-600 font-medium">Transactions</button>
+        <button id="navRegisterAttendant" class="text-gray-700 hover:text-indigo-600 font-medium">Register Attendant</button>
         <button id="logoutBtnDesktop" class="mt-6 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl font-medium transition">Logout</button>
       </nav>
     </aside>
@@ -73,79 +79,103 @@
         </div>
       </div>
 
+      <!-- Register Attendant Page -->
+      <div id="registerAttendantSection" class="hidden max-w-md mx-auto bg-white p-6 rounded-xl shadow-xl">
+        <h2 class="text-2xl font-bold text-gray-800 mb-4">Register New Attendant</h2>
+        <form id="registerAttendantForm" class="flex flex-col gap-4">
+          <input type="text" id="newUsername" placeholder="Username" required
+                 class="w-full px-4 py-3 border rounded-xl border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-400"/>
+          <input type="password" id="newPassword" placeholder="Password" required
+                 class="w-full px-4 py-3 border rounded-xl border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-400"/>
+          <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-xl font-semibold transition">
+            Register Attendant
+          </button>
+          <p id="registerMsg" class="text-sm text-red-500 mt-2"></p>
+        </form>
+      </div>
+
     </main>
   </div>
 
 <script>
-  // =============================
   // AUTH CHECK
-  // =============================
   const user_id = localStorage.getItem("user_id");
   const role = localStorage.getItem("role");
 
   if (!user_id || role !== "admin") {
     alert("Access denied. Only admins can access this page.");
-    window.location.href = "login.html";
+    window.location.href = "index.html";
   }
 
-  // =============================
   // LOGOUT
-  // =============================
   [document.getElementById("logoutBtn"), document.getElementById("logoutBtnDesktop")].forEach(btn => {
-    btn?.addEventListener("click", () => {
+    btn?.addEventListener("click", (e) => {
+      e.preventDefault(); // ✅ prevent any default form submission
       localStorage.removeItem("user_id");
       localStorage.removeItem("role");
-      window.location.href = "login.html";
+      localStorage.removeItem("username");
+    
+      window.location.href = "/";
     });
   });
 
   const dashboardSection = document.getElementById("dashboardSection");
   const transactionsSection = document.getElementById("transactionsSection");
+  const registerSection = document.getElementById("registerAttendantSection");
 
-  document.getElementById("navDashboard").onclick = () => {
+  // DESKTOP NAV
+  document.getElementById("navDashboard").onclick = showDashboard;
+  document.getElementById("navTransactions").onclick = showTransactions;
+  document.getElementById("navRegisterAttendant").onclick = showRegister;
+
+  // MOBILE NAV
+  document.getElementById("navDashboardMobile").onclick = showDashboard;
+  document.getElementById("navTransactionsMobile").onclick = showTransactions;
+  document.getElementById("navRegisterAttendantMobile").onclick = showRegister;
+
+  function showDashboard() {
     dashboardSection.classList.remove("hidden");
     transactionsSection.classList.add("hidden");
+    registerSection.classList.add("hidden");
     loadDashboardStats();
-  };
+  }
 
-  document.getElementById("navTransactions").onclick = () => {
+  function showTransactions() {
     dashboardSection.classList.add("hidden");
     transactionsSection.classList.remove("hidden");
+    registerSection.classList.add("hidden");
     loadTransactions();
-  };
+  }
 
-  // =============================
+  function showRegister() {
+    dashboardSection.classList.add("hidden");
+    transactionsSection.classList.add("hidden");
+    registerSection.classList.remove("hidden");
+  }
+
   // DASHBOARD STATS
-  // =============================
   async function loadDashboardStats() {
     try {
-      // ✅ RELATIVE PATH for Render deployment
       const res = await fetch("/total_sales");
       const salesData = await res.json();
-      document.getElementById("totalSales").innerText = `₦${salesData.total || 0}`;
+      document.getElementById("totalSales").innerText = `₦${salesData.total?.toLocaleString() || 0}`;
     } catch (err) {
-      console.error("Failed to fetch dashboard stats:", err);
+      console.error(err);
     }
   }
 
-  // =============================
-  // LOAD TRANSACTIONS
-  // =============================
+  // TRANSACTIONS
   let allTransactions = [];
-
   async function loadTransactions() {
     const tableBody = document.getElementById("transactionsTableBody");
     tableBody.innerHTML = "<tr><td colspan='7' class='text-center p-4'>Loading...</td></tr>";
-
     try {
-      const res = await fetch("/all_transactions"); // ✅ RELATIVE PATH
+      const res = await fetch("/all_transactions");
       const data = await res.json();
-
-      allTransactions = Array.isArray(data) ? data : (data.transactions || []);
+      allTransactions = Array.isArray(data) ? data : [];
       renderTransactions(allTransactions);
-
     } catch (err) {
-      console.error("Failed to load transactions:", err);
+      console.error(err);
       tableBody.innerHTML = "<tr><td colspan='7' class='text-center p-4 text-red-500'>Failed to load transactions</td></tr>";
     }
   }
@@ -153,28 +183,20 @@
   function renderTransactions(data) {
     const tableBody = document.getElementById("transactionsTableBody");
     tableBody.innerHTML = "";
-
     if (!data.length) {
       tableBody.innerHTML = "<tr><td colspan='7' class='text-center p-4'>No transactions found</td></tr>";
       return;
     }
-
     data.forEach(t => {
-      let dt = new Date();
-      if (t.created_at) {
-        const parsed = new Date(t.created_at.replace(' ', 'T'));
-        if (!isNaN(parsed)) dt = parsed;
-      }
-
+      const dt = t.sales_date ? new Date(t.sales_date) : new Date();
       const date = dt.toLocaleDateString();
       const time = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td class="px-4 py-2 whitespace-nowrap">${t.id}</td>
         <td class="px-4 py-2 whitespace-nowrap">${t.attendant_name || "N/A"}</td>
-        <td class="px-4 py-2 whitespace-nowrap">₦${t.amount_withdrawn || 0}</td>
-        <td class="px-4 py-2 whitespace-nowrap">₦${t.charge || 0}</td>
+        <td class="px-4 py-2 whitespace-nowrap">₦${t.amount_withdrawn?.toLocaleString() || 0}</td>
+        <td class="px-4 py-2 whitespace-nowrap">₦${t.charge?.toLocaleString() || 0}</td>
         <td class="px-4 py-2 whitespace-nowrap">${t.transaction_type || "N/A"}</td>
         <td class="px-4 py-2 whitespace-nowrap">${date}</td>
         <td class="px-4 py-2 whitespace-nowrap">${time}</td>
@@ -183,33 +205,57 @@
     });
   }
 
-  // =============================
   // SEARCH
-  // =============================
   document.getElementById("transactionSearch").addEventListener("input", e => {
     const val = e.target.value.toLowerCase();
-    const filtered = allTransactions.filter(t =>
-      (t.attendant_name || "").toLowerCase().includes(val)
-    );
+    const filtered = allTransactions.filter(t => (t.attendant_name || "").toLowerCase().includes(val));
     renderTransactions(filtered);
   });
 
-  // =============================
   // DELETE ALL
-  // =============================
   document.getElementById("clearTransactionsBtn").onclick = async () => {
     if (!confirm("Are you sure you want to delete ALL transactions?")) return;
-
     try {
-      const res = await fetch("/delete_all_transactions", { method: "DELETE" }); // ✅ RELATIVE PATH
+      const res = await fetch("/delete_all_transactions", { method: "DELETE" });
       const data = await res.json();
-
       if (res.ok) {
         alert(data.message || "All transactions deleted!");
         loadTransactions();
         loadDashboardStats();
       } else alert(data.detail || "Failed to delete transactions");
-    } catch (err) { alert("Server unreachable."); console.error(err); }
+    } catch (err) {
+      alert("Server unreachable."); console.error(err);
+    }
+  };
+
+  // REGISTER ATTENDANT
+  document.getElementById("registerAttendantForm").onsubmit = async (e) => {
+    e.preventDefault();
+    const username = document.getElementById("newUsername").value.trim();
+    const password = document.getElementById("newPassword").value.trim();
+    const registerMsg = document.getElementById("registerMsg");
+    registerMsg.innerText = "";
+    if (!username || !password) return;
+    try {
+      const res = await fetch("/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password, role: "attendant", current_user_id: user_id })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        registerMsg.style.color = "green";
+        registerMsg.innerText = `Attendant '${username}' registered successfully!`;
+        document.getElementById("registerAttendantForm").reset();
+      } else {
+        registerMsg.style.color = "red";
+        registerMsg.innerText = data.detail || "Failed to register attendant";
+      }
+    } catch (err) {
+      registerMsg.style.color = "red";
+      registerMsg.innerText = "Server unreachable";
+      console.error(err);
+    }
   };
 
   // Show dashboard on load

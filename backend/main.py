@@ -39,34 +39,28 @@ class RegisterRequest(BaseModel):
     role: str = "attendant"
     current_user_id: int
 
-
 # ============================================================
 # FRONTEND PATH
 # ============================================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 
+# Serve frontend folder for CSS/JS/images and HTML files
+app.mount("/frontend", StaticFiles(directory=FRONTEND_DIR), name="frontend")
 
-# ============================================================
-# ROOT → SERVE login.html DIRECTLY
-# ============================================================
+# Serve index.html at root (works locally and in production)
 @app.get("/")
-def serve_login():
-    return FileResponse(os.path.join(FRONTEND_DIR, "login.html"))
+def root():
+    return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
 
+# Serve dashboards explicitly
+@app.get("/admin_dashboard.html")
+def admin_dashboard():
+    return FileResponse(os.path.join(FRONTEND_DIR, "admin_dashboard.html"))
 
-# ============================================================
-# SERVE OTHER HTML FILES
-# ============================================================
-@app.get("/{page_name}")
-def serve_page(page_name: str):
-    file_path = os.path.join(FRONTEND_DIR, page_name)
-
-    if os.path.exists(file_path) and file_path.endswith(".html"):
-        return FileResponse(file_path)
-
-    raise HTTPException(status_code=404, detail="Page not found")
-
+@app.get("/sales.html")
+def sales_dashboard():
+    return FileResponse(os.path.join(FRONTEND_DIR, "sales.html"))
 
 # ============================================================
 # LOGIN
@@ -81,7 +75,6 @@ def login(req: LoginRequest):
         (req.username,)
     )
     user = cur.fetchone()
-
     cur.close()
     conn.close()
 
@@ -94,14 +87,12 @@ def login(req: LoginRequest):
         "role": user[3]
     }
 
-
 # ============================================================
 # REGISTER (Admin Only)
 # ============================================================
 @app.post("/register")
 def register_user(req: RegisterRequest):
-    verify_admin(req.current_user_id)
-
+    verify_admin(req.current_user_id)  # ensure only admin can register
     conn = get_db()
     cur = conn.cursor()
 
@@ -112,21 +103,17 @@ def register_user(req: RegisterRequest):
         raise HTTPException(status_code=400, detail="Username already exists")
 
     hashed_password = hash_password(req.password)
-
-    cur.execute("""
-        INSERT INTO users (username, password, role)
-        VALUES (%s, %s, %s)
-    """, (req.username, hashed_password, req.role))
-
+    cur.execute(
+        "INSERT INTO users (username, password, role) VALUES (%s, %s, %s)",
+        (req.username, hashed_password, req.role)
+    )
     conn.commit()
     cur.close()
     conn.close()
-
     return {"message": f"User '{req.username}' registered successfully"}
 
-
 # ============================================================
-# CREATE TRANSACTION
+# TRANSACTIONS
 # ============================================================
 @app.post("/transactions")
 def log_transaction(req: TransactionRequest):
@@ -150,10 +137,6 @@ def log_transaction(req: TransactionRequest):
 
     return {"message": "Transaction recorded successfully"}
 
-
-# ============================================================
-# GET ALL TRANSACTIONS
-# ============================================================
 @app.get("/all_transactions")
 def all_transactions():
     conn = get_db()
@@ -187,7 +170,6 @@ def all_transactions():
         for r in rows
     ]
 
-
 # ============================================================
 # DASHBOARD STATS
 # ============================================================
@@ -201,7 +183,6 @@ def attendants_count():
     conn.close()
     return {"count": count}
 
-
 @app.get("/transactions_count")
 def transactions_count():
     conn = get_db()
@@ -212,7 +193,6 @@ def transactions_count():
     conn.close()
     return {"count": count}
 
-
 @app.get("/total_sales")
 def total_sales():
     conn = get_db()
@@ -222,7 +202,6 @@ def total_sales():
     cur.close()
     conn.close()
     return {"total": float(total)}
-
 
 # ============================================================
 # DELETE ALL TRANSACTIONS
