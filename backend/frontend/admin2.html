@@ -110,10 +110,11 @@
   // LOGOUT
   [document.getElementById("logoutBtn"), document.getElementById("logoutBtnDesktop")].forEach(btn => {
     btn?.addEventListener("click", (e) => {
-      e.preventDefault();
+      e.preventDefault(); // ✅ prevent any default form submission
       localStorage.removeItem("user_id");
       localStorage.removeItem("role");
       localStorage.removeItem("username");
+    
       window.location.href = "/";
     });
   });
@@ -227,21 +228,14 @@
     }
   };
 
-  // REGISTER ATTENDANT WITH ROTATING BUTTON
+  // REGISTER ATTENDANT
   document.getElementById("registerAttendantForm").onsubmit = async (e) => {
     e.preventDefault();
     const username = document.getElementById("newUsername").value.trim();
     const password = document.getElementById("newPassword").value.trim();
     const registerMsg = document.getElementById("registerMsg");
-    const submitBtn = e.target.querySelector("button[type='submit']");
-    
     registerMsg.innerText = "";
     if (!username || !password) return;
-
-    // Add rotation animation while submitting
-    submitBtn.disabled = true;
-    submitBtn.classList.add("animate-spin", "opacity-50");
-
     try {
       const res = await fetch("/register", {
         method: "POST",
@@ -261,10 +255,6 @@
       registerMsg.style.color = "red";
       registerMsg.innerText = "Server unreachable";
       console.error(err);
-    } finally {
-      // Remove rotation after request finishes
-      submitBtn.disabled = false;
-      submitBtn.classList.remove("animate-spin", "opacity-50");
     }
   };
 
