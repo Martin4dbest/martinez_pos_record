@@ -68,9 +68,7 @@
                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
               </tr>
             </thead>
-            <tbody id="transactionsTableBody" class="bg-white divide-y divide-gray-200">
-              <!-- JS populates transactions -->
-            </tbody>
+            <tbody id="transactionsTableBody" class="bg-white divide-y divide-gray-200"></tbody>
           </table>
         </div>
       </div>
@@ -121,7 +119,8 @@
   // =============================
   async function loadDashboardStats() {
     try {
-      const res = await fetch("http://127.0.0.1:8000/total_sales");
+      // ✅ RELATIVE PATH for Render deployment
+      const res = await fetch("/total_sales");
       const salesData = await res.json();
       document.getElementById("totalSales").innerText = `₦${salesData.total || 0}`;
     } catch (err) {
@@ -139,7 +138,7 @@
     tableBody.innerHTML = "<tr><td colspan='7' class='text-center p-4'>Loading...</td></tr>";
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/all_transactions");
+      const res = await fetch("/all_transactions"); // ✅ RELATIVE PATH
       const data = await res.json();
 
       allTransactions = Array.isArray(data) ? data : (data.transactions || []);
@@ -161,7 +160,6 @@
     }
 
     data.forEach(t => {
-      // Safe date parsing
       let dt = new Date();
       if (t.created_at) {
         const parsed = new Date(t.created_at.replace(' ', 'T'));
@@ -203,7 +201,7 @@
     if (!confirm("Are you sure you want to delete ALL transactions?")) return;
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/delete_all_transactions", { method: "DELETE" });
+      const res = await fetch("/delete_all_transactions", { method: "DELETE" }); // ✅ RELATIVE PATH
       const data = await res.json();
 
       if (res.ok) {
@@ -217,6 +215,7 @@
   // Show dashboard on load
   dashboardSection.classList.remove("hidden");
   loadDashboardStats();
+
 </script>
 
 </body>
